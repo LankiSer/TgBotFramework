@@ -46,10 +46,17 @@ class Database:
                 last_name TEXT,
                 language_code TEXT,
                 is_bot INTEGER DEFAULT 0,
+                is_admin INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # Добавляем колонку is_admin если её нет (для существующих баз)
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # Колонка уже существует
         
         # Таблица состояний пользователей
         cursor.execute("""
@@ -152,13 +159,20 @@ class Database:
     
     def add_user(self, user_id: int, username: Optional[str] = None,
                  first_name: Optional[str] = None, last_name: Optional[str] = None,
-                 language_code: Optional[str] = None, is_bot: bool = False):
+                 language_code: Optional[str] = None, is_bot: bool = False, is_admin: bool = False):
         """Добавить или обновить пользователя"""
+        # Сохраняем текущий статус админа при обновлении, если is_admin не указан явно
+        existing_user = self.get_user(user_id)
+        if existing_user and not is_admin:
+            is_admin_value = bool(existing_user.get("is_admin", 0))
+        else:
+            is_admin_value = is_admin
+        
         self.execute("""
             INSERT OR REPLACE INTO users 
-            (user_id, username, first_name, last_name, language_code, is_bot, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """, (user_id, username, first_name, last_name, language_code, int(is_bot)))
+            (user_id, username, first_name, last_name, language_code, is_bot, is_admin, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (user_id, username, first_name, last_name, language_code, int(is_bot), int(is_admin_value)))
     
     def get_user(self, user_id: int) -> Optional[sqlite3.Row]:
         """Получить информацию о пользователе"""
@@ -193,6 +207,37 @@ class Database:
             INSERT OR REPLACE INTO messages (message_id, chat_id, user_id, text)
             VALUES (?, ?, ?, ?)
         """, (message_id, chat_id, user_id, text))
+    
+    def set_admin(self, user_id: int, is_admin: bool = True):
+        """Установить статус администратора для пользователя"""
+        self.execute("""
+            UPDATE users 
+            SET is_admin = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+        """, (int(is_admin), user_id))
+    
+    def is_admin(self, user_id: int) -> bool:
+        """Проверить, является ли пользователь администратором"""
+        user = self.get_user(user_id)
+        if user:
+            return bool(user.get("is_admin", 0))
+        return False
+    
+    def get_all_admins(self) -> List[sqlite3.Row]:
+        """Получить список всех администраторов"""
+        return self.fetchall("SELECT * FROM users WHERE is_admin = 1")
+    
+    def get_all_users(self, limit: Optional[int] = None) -> List[sqlite3.Row]:
+        """Получить список всех пользователей"""
+        query = "SELECT * FROM users ORDER BY created_at DESC"
+        if limit:
+            query += f" LIMIT {limit}"
+        return self.fetchall(query)
+    
+    def get_user_count(self) -> int:
+        """Получить общее количество пользователей"""
+        result = self.fetchone("SELECT COUNT(*) as count FROM users")
+        return result["count"] if result else 0
     
     def close(self):
         """Закрыть соединение с базой данных"""

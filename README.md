@@ -253,7 +253,7 @@ bot.run()
 - `user_states` - состояния пользователей
 - `quizzes` - квизы
 
-#### `add_user(user_id: int, username: Optional[str] = None, first_name: Optional[str] = None, last_name: Optional[str] = None, language_code: Optional[str] = None, is_bot: bool = False)`
+#### `add_user(user_id: int, username: Optional[str] = None, first_name: Optional[str] = None, last_name: Optional[str] = None, language_code: Optional[str] = None, is_bot: bool = False, is_admin: bool = False)`
 
 Добавляет или обновляет информацию о пользователе.
 
@@ -264,10 +264,11 @@ bot.run()
 - `last_name` (str, опционально): Фамилия пользователя
 - `language_code` (str, опционально): Код языка пользователя
 - `is_bot` (bool, опционально): Является ли пользователь ботом
+- `is_admin` (bool, опционально): Является ли пользователь администратором
 
 **Пример:**
 ```python
-db.add_user(123456, username="john_doe", first_name="John")
+db.add_user(123456, username="john_doe", first_name="John", is_admin=True)
 ```
 
 #### `get_user(user_id: int) -> Optional[sqlite3.Row]`
@@ -370,6 +371,78 @@ db.set_user_state(123456, "waiting_for_name")
 
 **Возвращает:**
 - `List[sqlite3.Row]`: Список всех строк результата
+
+#### `set_admin(user_id: int, is_admin: bool = True)`
+
+Устанавливает статус администратора для пользователя.
+
+**Параметры:**
+- `user_id` (int): ID пользователя
+- `is_admin` (bool, опционально): Установить статус администратора. По умолчанию True
+
+**Пример:**
+```python
+db.set_admin(123456, is_admin=True)  # Дать права администратора
+db.set_admin(123456, is_admin=False)  # Убрать права администратора
+```
+
+#### `is_admin(user_id: int) -> bool`
+
+Проверяет, является ли пользователь администратором.
+
+**Параметры:**
+- `user_id` (int): ID пользователя
+
+**Возвращает:**
+- `bool`: True если пользователь является администратором
+
+**Пример:**
+```python
+if db.is_admin(123456):
+    print("Пользователь является администратором")
+```
+
+#### `get_all_admins() -> List[sqlite3.Row]`
+
+Получает список всех администраторов.
+
+**Возвращает:**
+- `List[sqlite3.Row]`: Список всех администраторов
+
+**Пример:**
+```python
+admins = db.get_all_admins()
+for admin in admins:
+    print(admin["first_name"])
+```
+
+#### `get_all_users(limit: Optional[int] = None) -> List[sqlite3.Row]`
+
+Получает список всех пользователей.
+
+**Параметры:**
+- `limit` (int, опционально): Максимальное количество пользователей
+
+**Возвращает:**
+- `List[sqlite3.Row]`: Список пользователей
+
+**Пример:**
+```python
+users = db.get_all_users(limit=10)  # Последние 10 пользователей
+```
+
+#### `get_user_count() -> int`
+
+Получает общее количество пользователей в базе данных.
+
+**Возвращает:**
+- `int`: Количество пользователей
+
+**Пример:**
+```python
+count = db.get_user_count()
+print(f"Всего пользователей: {count}")
+```
 
 #### `close()`
 
@@ -856,35 +929,251 @@ command, args = parse_command("/start hello world")
 # args = "hello world"
 ```
 
+## Новые возможности 2.0
+
+### Webhook поддержка
+
+```python
+# Запуск в режиме webhook
+await bot.start_webhook(
+    host="0.0.0.0",
+    port=8080,
+    path="/webhook",
+    secret_token="your_secret_token"
+)
+```
+
+### FSM (Finite State Machine)
+
+```python
+from tgframework import FSMState, StatesGroup, FSMContext, state
+
+class MyStates(StatesGroup):
+    waiting_for_name = FSMState()
+    waiting_for_age = FSMState()
+
+@state(MyStates.waiting_for_name)
+async def handle_name(update, context):
+    fsm = FSMContext(bot.state_machine, context["user"]["id"], context["chat"]["id"])
+    await fsm.set_state(MyStates.waiting_for_age)
+    await fsm.update_data(name=context["text"])
+```
+
+### Готовые фильтры
+
+```python
+from tgframework import Filters
+
+# Фильтр для фото
+@bot.register_message_handler(filters=Filters.Photo())
+async def photo_handler(update, context):
+    ...
+
+# Комбинация фильтров
+@bot.register_message_handler(filters=Filters.Text() & Filters.PrivateChat())
+async def private_text_handler(update, context):
+    ...
+```
+
+### Pagination
+
+```python
+from tgframework import PaginationKeyboard
+
+items = ["Элемент 1", "Элемент 2", ...]
+pagination = PaginationKeyboard(
+    items=items,
+    items_per_page=5,
+    callback_prefix="page_"
+)
+
+keyboard = pagination.build(0)  # Первая страница
+await bot.send_message(chat_id, "Список:", reply_markup=keyboard)
+```
+
+### Обработка ошибок
+
+```python
+@bot.register_error_handler
+async def error_handler(error, context):
+    print(f"Ошибка: {error}")
+    # Ваша логика обработки
+```
+
 ## Примеры
 
 В папке `examples/` находятся примеры ботов:
 
 - `simple_bot.py` - простой бот с базовыми командами
 - `quiz_bot.py` - бот с полноценной системой квизов
+- `admin_bot.py` - бот с регистрацией пользователей и админкой
+- `advanced_bot.py` - продвинутый пример с FSM, фильтрами, pagination и обработкой ошибок
 
 ## Структура проекта
 
 ```
 tgframework/
 ├── __init__.py          # Основной модуль
-├── bot.py               # Класс бота
+├── bot.py               # Класс бота (polling и webhook)
 ├── database.py          # Работа с базой данных
 ├── handlers.py          # Обработчики
 ├── quiz.py              # Система квизов
 ├── keyboards.py         # Построители клавиатур
 ├── state.py             # Управление состояниями
+├── fsm.py               # FSM система (как в aiogram)
+├── filters.py           # Готовые фильтры
+├── pagination.py        # Pagination для клавиатур
+├── rate_limiter.py      # Rate limiting защита
 ├── middleware.py        # Middleware система
 └── utils.py             # Утилиты
 
 examples/
 ├── simple_bot.py        # Простой пример
-└── quiz_bot.py          # Пример с квизами
+├── quiz_bot.py          # Пример с квизами
+├── admin_bot.py         # Пример с регистрацией и админкой
+└── advanced_bot.py      # Продвинутый пример (FSM, фильтры, pagination)
 
 requirements.txt
 setup.py
 README.md
 ```
+
+## Сравнение с другими библиотеками
+
+TgFramework создан как простая и удобная альтернатива существующим библиотекам для создания Telegram ботов. Ниже представлено сравнение с популярными решениями:
+
+### TgFramework vs python-telegram-bot
+
+**Преимущества TgFramework:**
+- Встроенная база данных SQLite с автоматическим управлением таблицами
+- Готовая система квизов
+- Более простой и интуитивный API для быстрого старта
+- Встроенная система состояний пользователей
+- Меньше зависимостей (только aiohttp)
+- Простая регистрация обработчиков через декораторы
+
+**Недостатки TgFramework:**
+- Меньше документации и примеров (новый проект)
+- Ограниченная поддержка Telegram Bot API (базовые методы)
+- Только polling режим (нет webhook)
+
+**Когда использовать TgFramework:**
+- Для быстрого создания простых ботов
+- Когда нужна встроенная база данных
+- Для проектов с квизами и опросами
+- Когда важна простота использования
+
+**Когда использовать python-telegram-bot:**
+- Для сложных проектов с полной поддержкой Telegram Bot API
+- Когда нужен webhook вместо polling
+- Для enterprise проектов с требованием стабильности
+
+### TgFramework vs aiogram
+
+**Преимущества TgFramework 2.0:**
+- Встроенная база данных SQLite с готовыми таблицами (пользователи, чаты, сообщения, состояния, квизы)
+- Система квизов из коробки - полнофункциональная система для создания тестов и опросов
+- FSM (Finite State Machine) - полноценная система состояний как в aiogram с декораторами
+- Готовые фильтры (Filters) - удобные фильтры для обработчиков с операторами &, |, ~
+- Pagination для клавиатур - встроенная навигация по страницам
+- Rate limiting защита - автоматическая защита от превышения лимитов Telegram API
+- Webhook поддержка - работает как polling, так и webhook режим
+- Улучшенная обработка ошибок - глобальные обработчики ошибок с логированием
+- Встроенная админка по ID пользователей
+- Retry механизм - автоматические повторы при ошибках API
+- Логирование - встроенная система логирования
+- Меньше зависимостей - только aiohttp (vs множество зависимостей в aiogram)
+- Более простая архитектура для начинающих
+- Меньше абстракций, более понятный код
+
+**Недостатки TgFramework:**
+- Новый проект - меньше сообщества и примеров
+- Не все методы Telegram Bot API реализованы (но все основные есть)
+- Меньше сторонних расширений и плагинов
+
+**Когда использовать TgFramework:**
+- Для быстрого создания ботов с минимальной настройкой
+- Когда нужна встроенная база данных без дополнительной настройки
+- Для ботов с квизами и опросами
+- Когда важна простота и минимум зависимостей
+- Для обучения и экспериментов
+- Для production проектов с базовым и средним функционалом
+
+**Когда использовать aiogram:**
+- Для очень сложных ботов с множеством интеграций
+- Когда нужны все методы Telegram Bot API без исключений
+- Для проектов с большой командой разработчиков, знакомых с aiogram
+- Когда нужны сторонние расширения и плагины
+
+### TgFramework vs Telethon
+
+**Преимущества TgFramework:**
+- Работает с Bot API (проще получить токен)
+- Встроенная база данных
+- Готовая система квизов и админки
+- Синхронный и асинхронный API
+- Проще для начинающих
+
+**Недостатки TgFramework:**
+- Работает только с Bot API (не Client API)
+- Меньше возможностей для автоматизации
+
+**Когда использовать TgFramework:**
+- Для создания обычных Telegram ботов
+- Когда не нужен Client API функционал
+
+**Когда использовать Telethon:**
+- Для работы с Telegram Client API
+- Для автоматизации личных аккаунтов
+- Для сложных сценариев взаимодействия с Telegram
+
+### Итоговое сравнение
+
+| Функция | TgFramework 2.0 | python-telegram-bot | aiogram | Telethon |
+|---------|-----------------|---------------------|---------|----------|
+| База данных из коробки | Да (SQLite) | Нет | Нет | Нет |
+| Система квизов | Да | Нет | Нет | Нет |
+| FSM (состояния) | Да | Частично | Да | Нет |
+| Готовые фильтры | Да | Частично | Да | Нет |
+| Pagination | Да | Нет | Нет | Нет |
+| Rate limiting | Да | Частично | Частично | Нет |
+| Webhook поддержка | Да | Да | Да | Да |
+| Обработка ошибок | Да (улучшенная) | Да | Да | Да |
+| Retry механизм | Да | Да | Частично | Нет |
+| Логирование | Да | Да | Да | Да |
+| Режим работы | Polling/Webhook | Polling/Webhook | Polling/Webhook | Client/Bot API |
+| Простота использования | Высокая | Средняя | Средняя | Низкая |
+| Поддержка Bot API | Основные методы | Полная | Полная | Полная |
+| Зависимости | Минимум (aiohttp) | Средние | Средние | Средние |
+| Админка из коробки | Да | Нет | Нет | Нет |
+| Документация | Хорошая | Отличная | Хорошая | Хорошая |
+| Сообщество | Растущее | Большое | Большое | Большое |
+
+### Вывод
+
+**TgFramework 2.0 теперь лучше чем aiogram в следующих аспектах:**
+
+1. **Встроенная база данных** - не нужно настраивать SQLAlchemy или другие ORM
+2. **Система квизов** - готовая система из коробки, в aiogram нужно писать с нуля
+3. **Админка по ID** - готовая система управления администраторами
+4. **Pagination** - встроенная навигация по страницам
+5. **Меньше зависимостей** - только aiohttp vs множество в aiogram
+6. **Проще для начинающих** - более понятный и интуитивный API
+7. **Rate limiting из коробки** - автоматическая защита от лимитов
+8. **Улучшенная обработка ошибок** - глобальные обработчики с retry
+
+**TgFramework 2.0 идеально подходит для:**
+- Быстрого создания ботов с минимальной настройкой
+- Проектов, требующих встроенную базу данных
+- Ботов с квизами и опросами
+- Проектов, где важна простота и минимум зависимостей
+- Production ботов с базовым и средним функционалом
+- Обучения и экспериментов
+
+**Когда стоит рассмотреть aiogram:**
+- Если команда уже знакома с aiogram
+- Для очень сложных проектов с множеством интеграций
+- Когда нужны все методы Telegram Bot API без исключений
 
 ## Лицензия
 

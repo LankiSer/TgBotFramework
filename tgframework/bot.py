@@ -5,13 +5,23 @@
 import asyncio
 import json
 import time
+import logging
 from typing import Any, Callable, Dict, List, Optional
 import aiohttp
+from aiohttp import web
 from .database import Database
 from .handlers import CommandHandler, CallbackHandler, MessageHandler
 from .state import StateMachine
 from .middleware import MiddlewareManager
+from .rate_limiter import TelegramRateLimiter
 from .utils import get_user_info, get_chat_info, parse_command
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 class Bot:
@@ -30,11 +40,13 @@ class Bot:
         self.db = Database(db_path)
         self.state_machine = StateMachine(self.db)
         self.middleware_manager = MiddlewareManager()
+        self.rate_limiter = TelegramRateLimiter()
         
         # Обработчики
         self.command_handlers: Dict[str, CommandHandler] = {}
         self.callback_handlers: List[CallbackHandler] = []
         self.message_handlers: List[MessageHandler] = []
+        self.state_handlers: Dict[str, List[Callable]] = {}
         
         # Настройки polling
         self.running = False
@@ -42,15 +54,24 @@ class Bot:
         self.timeout = 30
         self.limit = 100
         
+        # Webhook настройки
+        self.webhook_url: Optional[str] = None
+        self.webhook_path: Optional[str] = None
+        self.webhook_server: Optional[web.Application] = None
+        
+        # Обработчики ошибок
+        self.error_handlers: List[Callable] = []
+        
         # Сессия для HTTP запросов
         self.session: Optional[aiohttp.ClientSession] = None
     
-    async def _make_request(self, method: str, **params) -> Dict[str, Any]:
+    async def _make_request(self, method: str, retries: int = 3, **params) -> Dict[str, Any]:
         """
-        Выполнить запрос к API Telegram
+        Выполнить запрос к API Telegram с обработкой ошибок и retry
         
         Args:
             method: Название метода API
+            retries: Количество попыток при ошибке
             **params: Параметры запроса
             
         Returns:
@@ -61,19 +82,65 @@ class Bot:
         
         url = f"{self.api_url}/{method}"
         
-        async with self.session.post(url, json=params) as response:
-            result = await response.json()
-            if not result.get("ok"):
-                raise Exception(f"API Error: {result.get('description')}")
-            return result.get("result")
+        for attempt in range(retries):
+            try:
+                async with self.session.post(url, json=params, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    result = await response.json()
+                    
+                    if not result.get("ok"):
+                        error_code = result.get("error_code", 0)
+                        description = result.get("description", "Unknown error")
+                        
+                        # Обработка rate limit
+                        if error_code == 429:
+                            retry_after = result.get("parameters", {}).get("retry_after", 1)
+                            logger.warning(f"Rate limit exceeded. Waiting {retry_after} seconds...")
+                            await asyncio.sleep(retry_after)
+                            continue
+                        
+                        # Обработка других ошибок
+                        error = Exception(f"API Error {error_code}: {description}")
+                        await self._handle_error(error, method=method, params=params)
+                        raise error
+                    
+                    return result.get("result")
+                    
+            except asyncio.TimeoutError:
+                if attempt < retries - 1:
+                    logger.warning(f"Timeout on attempt {attempt + 1}/{retries}. Retrying...")
+                    await asyncio.sleep(1)
+                    continue
+                raise
+            except Exception as e:
+                if attempt < retries - 1:
+                    logger.warning(f"Error on attempt {attempt + 1}/{retries}: {e}. Retrying...")
+                    await asyncio.sleep(1)
+                    continue
+                await self._handle_error(e, method=method, params=params)
+                raise
+        
+        raise Exception(f"Failed to execute {method} after {retries} attempts")
+    
+    async def _handle_error(self, error: Exception, **context):
+        """Обработать ошибку через зарегистрированные обработчики"""
+        for handler in self.error_handlers:
+            try:
+                await handler(error, context)
+            except Exception as e:
+                logger.error(f"Error in error handler: {e}")
+    
+    def register_error_handler(self, handler: Callable):
+        """Зарегистрировать обработчик ошибок"""
+        self.error_handlers.append(handler)
     
     async def send_message(self, chat_id: int, text: str, 
                           reply_markup: Optional[Dict] = None,
                           parse_mode: Optional[str] = None,
                           reply_to_message_id: Optional[int] = None,
+                          rate_limit: bool = True,
                           **kwargs) -> Dict[str, Any]:
         """
-        Отправить сообщение
+        Отправить сообщение с rate limiting
         
         Args:
             chat_id: ID чата
@@ -81,11 +148,16 @@ class Bot:
             reply_markup: Клавиатура
             parse_mode: Режим парсинга (HTML, Markdown, MarkdownV2)
             reply_to_message_id: ID сообщения для ответа
+            rate_limit: Применить rate limiting
             **kwargs: Дополнительные параметры
             
         Returns:
             Отправленное сообщение
         """
+        if rate_limit:
+            user_id = kwargs.get("user_id") if isinstance(chat_id, int) and chat_id > 0 else None
+            await self.rate_limiter.wait_message(user_id)
+        
         params = {
             "chat_id": chat_id,
             "text": text,
@@ -243,31 +315,6 @@ class Bot:
             # Используется напрямую
             self.callback_handlers.append(CallbackHandler(pattern, handler))
     
-    def register_message_handler(self, handler: Callable = None, filters: Optional[Callable] = None):
-        """
-        Зарегистрировать обработчик сообщений
-        
-        Можно использовать как декоратор:
-            @bot.register_message_handler(filters=lambda u: u.get("message", {}).get("text"))
-            async def text_handler(update, context):
-                ...
-        
-        Или напрямую:
-            bot.register_message_handler(handler, filters)
-        
-        Args:
-            handler: Функция-обработчик (если используется как декоратор)
-            filters: Функция-фильтр
-        """
-        if handler is None:
-            # Используется как декоратор
-            def decorator(func: Callable):
-                self.message_handlers.append(MessageHandler(func, filters))
-                return func
-            return decorator
-        else:
-            # Используется напрямую
-            self.message_handlers.append(MessageHandler(handler, filters))
     
     async def _process_update(self, update: Dict[str, Any]):
         """
@@ -362,6 +409,21 @@ class Bot:
                     await self.command_handlers[command].handle(update, context)
                     return
             
+            # Обработка FSM состояний (до обычных сообщений)
+            if user and "text" in message:
+                user_id = user["id"]
+                current_state = self.state_machine.get_state(user_id)
+                
+                if current_state and current_state in self.state_handlers:
+                    for handler in self.state_handlers[current_state]:
+                        try:
+                            await handler(update, context)
+                            return
+                        except Exception as e:
+                            logger.error(f"Error in state handler: {e}", exc_info=True)
+                            await self._handle_error(e, update=update)
+                            return
+            
             # Обработка обычного сообщения
             for handler in self.message_handlers:
                 if handler.should_handle(update):
@@ -381,21 +443,108 @@ class Bot:
                     
                     await self._process_update(update)
                 
+            except KeyboardInterrupt:
+                raise
             except Exception as e:
-                print(f"Ошибка при обработке обновлений: {e}")
+                logger.error(f"Error in polling loop: {e}", exc_info=True)
+                await self._handle_error(e)
                 await asyncio.sleep(5)
     
     async def start_polling(self):
         """Запустить polling"""
         self.running = True
-        print(f"Бот запущен и ожидает обновления...")
+        logger.info("Бот запущен в режиме polling...")
         
         try:
             await self._polling_loop()
         except KeyboardInterrupt:
-            print("\nОстановка бота...")
+            logger.info("Получен сигнал остановки...")
         finally:
             await self.stop()
+    
+    async def set_webhook(self, url: str, secret_token: Optional[str] = None):
+        """
+        Установить webhook
+        
+        Args:
+            url: URL для webhook
+            secret_token: Секретный токен для верификации
+        """
+        params = {"url": url}
+        if secret_token:
+            params["secret_token"] = secret_token
+        
+        result = await self._make_request("setWebhook", **params)
+        self.webhook_url = url
+        logger.info(f"Webhook установлен: {url}")
+        return result
+    
+    async def delete_webhook(self, drop_pending_updates: bool = False):
+        """Удалить webhook"""
+        params = {}
+        if drop_pending_updates:
+            params["drop_pending_updates"] = True
+        
+        result = await self._make_request("deleteWebhook", **params)
+        self.webhook_url = None
+        logger.info("Webhook удален")
+        return result
+    
+    async def start_webhook(self, host: str = "0.0.0.0", port: int = 8080,
+                           path: str = "/webhook", secret_token: Optional[str] = None):
+        """
+        Запустить webhook сервер
+        
+        Args:
+            host: Хост для прослушивания
+            port: Порт для прослушивания
+            path: Путь для webhook
+            secret_token: Секретный токен для верификации
+        """
+        app = web.Application()
+        self.webhook_path = path
+        
+        async def webhook_handler(request):
+            """Обработчик webhook запросов"""
+            # Проверка секретного токена
+            if secret_token:
+                token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+                if token != secret_token:
+                    logger.warning("Invalid secret token")
+                    return web.Response(status=403)
+            
+            try:
+                update = await request.json()
+                await self._process_update(update)
+                return web.Response(status=200)
+            except Exception as e:
+                logger.error(f"Error processing webhook: {e}", exc_info=True)
+                await self._handle_error(e, request=request)
+                return web.Response(status=500)
+        
+        app.router.add_post(path, webhook_handler)
+        self.webhook_server = app
+        
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, host, port)
+        await site.start()
+        
+        logger.info(f"Webhook сервер запущен на {host}:{port}{path}")
+        
+        # Устанавливаем webhook
+        webhook_url = f"https://{host}:{port}{path}" if host != "0.0.0.0" else f"http://your-domain.com{path}"
+        await self.set_webhook(webhook_url, secret_token)
+        
+        # Держим сервер запущенным
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except KeyboardInterrupt:
+            logger.info("Остановка webhook сервера...")
+        finally:
+            await runner.cleanup()
+            await self.delete_webhook()
     
     async def stop(self):
         """Остановить бота"""
@@ -403,12 +552,39 @@ class Bot:
         if self.session:
             await self.session.close()
         self.db.close()
-        print("Бот остановлен.")
+        logger.info("Бот остановлен.")
     
     def run(self):
         """Запустить бота (синхронный метод)"""
         try:
             asyncio.run(self.start_polling())
         except KeyboardInterrupt:
-            print("\nОстановка бота...")
+            logger.info("Остановка бота...")
+    
+    def register_message_handler(self, handler: Callable = None, filters=None):
+        """
+        Зарегистрировать обработчик сообщений с поддержкой фильтров
+        
+        Args:
+            handler: Функция-обработчик (если используется как декоратор)
+            filters: Фильтр или функция-фильтр
+        """
+        if handler is None:
+            # Используется как декоратор
+            def decorator(func: Callable):
+                # Если фильтр - это класс Filter, используем его метод check
+                if filters and hasattr(filters, 'check'):
+                    filter_func = filters.check
+                else:
+                    filter_func = filters
+                self.message_handlers.append(MessageHandler(func, filter_func))
+                return func
+            return decorator
+        else:
+            # Используется напрямую
+            if filters and hasattr(filters, 'check'):
+                filter_func = filters.check
+            else:
+                filter_func = filters
+            self.message_handlers.append(MessageHandler(handler, filter_func))
 
