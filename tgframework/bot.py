@@ -339,17 +339,19 @@ class Bot:
             callback_query = update["callback_query"]
             callback_data = callback_query.get("data", "")
             
-            # Сохранение пользователя
+            # Сохранение пользователя (только если его еще нет)
             if "from" in callback_query:
                 user = callback_query["from"]
-                self.db.add_user(
-                    user["id"],
-                    user.get("username"),
-                    user.get("first_name"),
-                    user.get("last_name"),
-                    user.get("language_code"),
-                    user.get("is_bot", False)
-                )
+                existing_user = self.db.get_user(user["id"])
+                if not existing_user:
+                    self.db.add_user(
+                        user["id"],
+                        user.get("username"),
+                        user.get("first_name"),
+                        user.get("last_name"),
+                        user.get("language_code"),
+                        user.get("is_bot", False)
+                    )
             
             # Поиск обработчика
             for handler in self.callback_handlers:
@@ -366,16 +368,18 @@ class Bot:
             chat = message.get("chat")
             text = message.get("text")
             
-            # Сохранение пользователя и чата
+            # Сохранение пользователя и чата (пользователь только если его еще нет)
             if user:
-                self.db.add_user(
-                    user["id"],
-                    user.get("username"),
-                    user.get("first_name"),
-                    user.get("last_name"),
-                    user.get("language_code"),
-                    user.get("is_bot", False)
-                )
+                existing_user = self.db.get_user(user["id"])
+                if not existing_user:
+                    self.db.add_user(
+                        user["id"],
+                        user.get("username"),
+                        user.get("first_name"),
+                        user.get("last_name"),
+                        user.get("language_code"),
+                        user.get("is_bot", False)
+                    )
             
             if chat:
                 self.db.add_chat(

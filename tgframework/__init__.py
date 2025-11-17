@@ -15,7 +15,7 @@ from .pagination import PaginationKeyboard, SimplePagination
 from .rate_limiter import RateLimiter, TelegramRateLimiter
 from .utils import get_user_info, get_chat_info, format_text
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 __all__ = [
     "Bot",
     "Database",
