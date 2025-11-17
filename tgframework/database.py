@@ -164,7 +164,8 @@ class Database:
         # Сохраняем текущий статус админа при обновлении, если is_admin не указан явно
         existing_user = self.get_user(user_id)
         if existing_user and not is_admin:
-            is_admin_value = bool(existing_user.get("is_admin", 0))
+            # sqlite3.Row поддерживает индексацию по имени колонки
+            is_admin_value = bool(existing_user["is_admin"] if "is_admin" in existing_user.keys() else 0)
         else:
             is_admin_value = is_admin
         
@@ -220,7 +221,8 @@ class Database:
         """Проверить, является ли пользователь администратором"""
         user = self.get_user(user_id)
         if user:
-            return bool(user.get("is_admin", 0))
+            # sqlite3.Row поддерживает индексацию по имени колонки
+            return bool(user["is_admin"] if "is_admin" in user.keys() else 0)
         return False
     
     def get_all_admins(self) -> List[sqlite3.Row]:

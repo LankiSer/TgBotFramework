@@ -19,15 +19,31 @@
 
 ## Установка
 
-### Через PyPI
+### Через PyPI (рекомендуется)
 
 ```bash
 pip install tgframework-bot
 ```
 
-### Из исходников
+### Из GitHub (последняя версия)
 
 ```bash
+pip install git+https://github.com/LankiSer/TgBotFramework.git
+```
+
+Для обновления до последней версии:
+
+```bash
+pip install --upgrade --force-reinstall git+https://github.com/LankiSer/TgBotFramework.git
+```
+
+### Из исходников (локально)
+
+Клонируйте репозиторий:
+
+```bash
+git clone https://github.com/LankiSer/TgBotFramework.git
+cd TgBotFramework
 pip install -r requirements.txt
 ```
 
@@ -35,6 +51,20 @@ pip install -r requirements.txt
 
 ```bash
 pip install -e .
+```
+
+### Обновление библиотеки
+
+Если библиотека уже установлена через PyPI:
+
+```bash
+pip install --upgrade tgframework-bot
+```
+
+Если установлена из GitHub:
+
+```bash
+pip install --upgrade --force-reinstall git+https://github.com/LankiSer/TgBotFramework.git
 ```
 
 ## Быстрый старт

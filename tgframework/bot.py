@@ -565,26 +565,85 @@ class Bot:
         """
         Зарегистрировать обработчик сообщений с поддержкой фильтров
         
+        Можно использовать как декоратор:
+            @bot.register_message_handler(filters=Filters.Text())
+            async def text_handler(update, context):
+                ...
+            
+            @bot.register_message_handler(lambda u: u.get("message", {}).get("text"))
+            async def text_handler(update, context):
+                ...
+            
+            @bot.register_message_handler()  # без фильтров
+            async def all_messages_handler(update, context):
+                ...
+        
+        Или напрямую:
+            bot.register_message_handler(handler, filters)
+        
         Args:
-            handler: Функция-обработчик (если используется как декоратор)
-            filters: Фильтр или функция-фильтр
+            handler: Функция-обработчик (если используется как декоратор, будет None или фильтр)
+            filters: Фильтр или функция-фильтр (если handler передан как фильтр, то filters игнорируется)
         """
-        if handler is None:
-            # Используется как декоратор
+        # Определяем, используется ли как декоратор или прямой вызов
+        # Если handler передан и это lambda или filter, то это может быть декоратор с фильтром
+        # Проверяем по сигнатуре: если handler - функция, которая принимает update, то это фильтр для декоратора
+        
+        # Вариант 1: Декоратор без аргументов @bot.register_message_handler()
+        if handler is None and filters is None:
+            def decorator(func: Callable):
+                self.message_handlers.append(MessageHandler(func, None))
+                return func
+            return decorator
+        
+        # Вариант 2: Декоратор с filters @bot.register_message_handler(filters=...)
+        if handler is None and filters is not None:
             def decorator(func: Callable):
                 # Если фильтр - это класс Filter, используем его метод check
-                if filters and hasattr(filters, 'check'):
+                if hasattr(filters, 'check'):
                     filter_func = filters.check
                 else:
                     filter_func = filters
                 self.message_handlers.append(MessageHandler(func, filter_func))
                 return func
             return decorator
-        else:
-            # Используется напрямую
-            if filters and hasattr(filters, 'check'):
+        
+        # Вариант 3: Декоратор с позиционным фильтром @bot.register_message_handler(lambda u: ...)
+        # Проверяем: если handler - это функция, которая может быть фильтром (не является MessageHandler)
+        # и filters не передан, то handler - это фильтр для декоратора
+        if handler is not None and callable(handler) and filters is None:
+            # Проверяем количество аргументов: фильтры обычно принимают 1 аргумент (update)
+            import inspect
+            try:
+                sig = inspect.signature(handler)
+                params = list(sig.parameters.values())
+                
+                # Если функция принимает 1 аргумент (update), это скорее всего фильтр
+                if len(params) == 1:
+                    def decorator(func: Callable):
+                        # handler - это фильтр
+                        if hasattr(handler, 'check'):
+                            filter_func = handler.check
+                        else:
+                            filter_func = handler
+                        self.message_handlers.append(MessageHandler(func, filter_func))
+                        return func
+                    return decorator
+            except (ValueError, TypeError):
+                pass
+        
+        # Вариант 4: Прямой вызов bot.register_message_handler(handler, filters)
+        if handler is not None and callable(handler):
+            if hasattr(filters, 'check'):
                 filter_func = filters.check
             else:
                 filter_func = filters
             self.message_handlers.append(MessageHandler(handler, filter_func))
+            return
+        
+        # Если дошли сюда - неправильное использование
+        raise TypeError(
+            "register_message_handler: неправильное использование. "
+            "Используйте @bot.register_message_handler() или bot.register_message_handler(handler, filters)"
+        )
 
