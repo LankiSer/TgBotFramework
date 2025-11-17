@@ -19,6 +19,14 @@
 
 ## Установка
 
+### Через PyPI
+
+```bash
+pip install tgframework-bot
+```
+
+### Из исходников
+
 ```bash
 pip install -r requirements.txt
 ```

@@ -16,14 +16,23 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+*.manifest
+*.spec
 
 # Virtual Environment
 venv/
 ENV/
 env/
+.venv
+.ENV
+env.bak/
+venv.bak/
 
 # IDEs
 .vscode/
@@ -31,21 +40,262 @@ env/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+.spyderproject
+.spyproject
+.ropeproject
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.env
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 
 # Logs
 *.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
 
-# Bot tokens
+# Bot tokens and configs
 config.py
-.env
-*.env
+config_local.py
+secrets.py
+*.key
+*.pem
+*.p12
+credentials.json
+token.txt
+bot_token.txt
 
+# PyPI credentials (ВАЖНО: не коммитьте!)
+.pypirc
+*.pypirc
+~/.pypirc
+
+# Test files
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+test-results/
+junit.xml
+
+# Distribution / Packaging
+*.tar.gz
+*.whl
+*.zip
+*.exe
+*.dmg
+*.pkg
+*.deb
+*.rpm
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+*~
+
+# Project specific
+*.pid
+*.seed
+*.pid.lock
+node_modules/
+
+# IDE - Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IDE - PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# IDE - Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# IDE - Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# IDE - Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+*.pdf
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# System files
+.directory
+.Trash-*
+.fuse_hidden*
+.nfs*
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.dylib
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Profiling data
+.prof
+
+# Local development
+.local/
+local_settings.py
+local.py
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Package files
+*.deb
+*.rpm
+*.msi
+*.pkg
+*.dmg
+
+# Local configuration
+.env.local
+.env.*.local
+local_settings.py
+settings_local.py
+
+# Database migrations (если используете)
+# migrations/

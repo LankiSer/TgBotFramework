@@ -1,0 +1,16 @@
+include README.md
+include LICENSE
+include requirements.txt
+recursive-include examples *.py
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude *.db
+global-exclude *.sqlite
+global-exclude *.sqlite3
+
+# Исключаем скрипты и инструкции для публикации (они нужны только в репозитории, не в пакете PyPI)
+exclude publish.py
+exclude ИНСТРУКЦИЯ_ПУБЛИКАЦИИ.md
+prune .git
+prune .github
+
