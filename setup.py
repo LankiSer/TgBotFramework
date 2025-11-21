@@ -1,5 +1,5 @@
 """
-Setup файл для TgFramework
+Setup файл для TgFramework 3.0
 """
 
 from setuptools import setup, find_packages
@@ -12,7 +12,7 @@ def get_version():
         for line in f:
             if line.startswith("__version__"):
                 return line.split("=")[1].strip().strip('"').strip("'")
-    return "2.0.0"
+    return "3.0.0"
 
 
 this_directory = Path(__file__).parent
@@ -23,7 +23,7 @@ setup(
     version=get_version(),
     author="Илья Кострицын",
     author_email="kostricyn50@mail.ru", 
-    description="Полнофункциональный фреймворк для разработки Telegram ботов с встроенной БД, FSM, фильтрами и квизами",
+    description="Полнофункциональный фреймворк для разработки Telegram ботов с DDD, ORM, веб-сервером и Mini Apps",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/LankiSer/TgBotFramework", 
@@ -51,8 +51,12 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "aiohttp>=3.9.0",
+        "python-dotenv>=1.0.0",
     ],
     extras_require={
+        "postgresql": [
+            "psycopg2-binary>=2.9.0",
+        ],
         "dev": [
             "pytest>=7.0.0",
             "pytest-asyncio>=0.21.0",
@@ -60,8 +64,18 @@ setup(
             "flake8>=6.0.0",
             "mypy>=1.0.0",
         ],
+        "all": [
+            "psycopg2-binary>=2.9.0",
+            "pytest>=7.0.0",
+            "pytest-asyncio>=0.21.0",
+        ],
     },
-    keywords="telegram bot api framework sqlite fsm filters quiz pagination",
+    entry_points={
+        "console_scripts": [
+            "tgframework=tgframework.cli.commands:main",
+        ],
+    },
+    keywords="telegram bot api framework ddd orm sqlite postgresql react nextjs miniapp admin",
     zip_safe=False,
     include_package_data=True,
 )
