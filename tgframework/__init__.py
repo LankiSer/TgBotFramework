@@ -1,14 +1,17 @@
 """
 TgFramework 3.0 - Полнофункциональный фреймворк для разработки Telegram ботов
 
-Новые возможности:
-- DDD/DTO архитектура
-- Собственная ORM с поддержкой SQLite и PostgreSQL
-- CLI для генерации проектов
-- Веб-сервер с админ-панелью
-- React/Next.js интеграция
-- Telegram Mini Apps поддержка
-- Конфигурация через .env
+Архитектура:
+- Core: Конфигурация, исключения
+- ORM: База данных (SQLite/PostgreSQL)
+- Domain: Модели, DTO, сервисы, репозитории (DDD)
+- Application: Handlers, keyboards, filters, middleware
+- Infrastructure: Rate limiter, utils
+- Features: Quiz, FSM
+- Bot: Telegram бот
+- Web: Веб-сервер, роутинг, контроллеры
+- Mini Apps: Поддержка Telegram Mini Apps
+- CLI: Генератор проектов, миграции
 """
 
 # Core
@@ -32,7 +35,7 @@ from .orm import (
     MigrationManager,
 )
 
-# Domain
+# Domain (DDD)
 from .domain import (
     User,
     Chat,
@@ -51,28 +54,57 @@ from .domain import (
     MessageService,
 )
 
+# Application
+from .application import (
+    CommandHandler,
+    CallbackHandler,
+    MessageHandler,
+    InlineKeyboardBuilder,
+    ReplyKeyboardBuilder,
+    Filter,
+    Filters,
+    Middleware,
+    MiddlewareManager,
+    StateMachine,
+    State,
+    PaginationKeyboard,
+    SimplePagination,
+)
+
+# Infrastructure
+from .infrastructure import (
+    RateLimiter,
+    TelegramRateLimiter,
+    get_user_info,
+    get_chat_info,
+    format_text,
+    parse_command,
+    escape_html,
+    escape_markdown,
+)
+
+# Features
+from .features import (
+    Quiz,
+    QuizQuestion,
+    FSMState,
+    StatesGroup,
+    FSMContext,
+    state,
+)
+
 # Bot
 from .bot import TelegramBot
-from .bot import TelegramBot as Bot  # Alias для обратной совместимости
-
-# Старые модули (обратная совместимость)
-from .database import Database
-from .handlers import CommandHandler, CallbackHandler, MessageHandler
-from .quiz import Quiz, QuizQuestion
-from .keyboards import InlineKeyboardBuilder, ReplyKeyboardBuilder
-from .state import State, StateMachine
-from .fsm import State as FSMState, StatesGroup, FSMContext, state
-from .middleware import Middleware, MiddlewareManager
-from .filters import Filter, Filters
-from .pagination import PaginationKeyboard, SimplePagination
-from .rate_limiter import RateLimiter, TelegramRateLimiter
-from .utils import get_user_info, get_chat_info, format_text
+from .bot import TelegramBot as Bot  # Alias
 
 # Web
-from .web import WebServer, AdminPanel, TelegramAuth
+from .web import WebServer, AdminPanel, TelegramAuth, Router, Controller
 
 # Mini Apps
 from .miniapp import MiniAppValidator, ReactRenderer, NextJSRenderer
+
+# Backward compatibility - Database (deprecated, use ORM)
+from .orm import Session as Database  # Temporary alias
 
 __version__ = "3.0.0"
 
@@ -96,6 +128,7 @@ __all__ = [
     "Session",
     "Migration",
     "MigrationManager",
+    "Database",  # Deprecated
     
     # Domain
     "User",
@@ -114,41 +147,49 @@ __all__ = [
     "ChatService",
     "MessageService",
     
-    # Bot
-    "TelegramBot",
-    "Bot",
-    
-    # Old modules (backward compatibility)
-    "Database",
+    # Application
     "CommandHandler",
     "CallbackHandler",
     "MessageHandler",
-    "Quiz",
-    "QuizQuestion",
     "InlineKeyboardBuilder",
     "ReplyKeyboardBuilder",
-    "State",
-    "StateMachine",
-    "FSMState",
-    "StatesGroup",
-    "FSMContext",
-    "state",
-    "Middleware",
-    "MiddlewareManager",
     "Filter",
     "Filters",
+    "Middleware",
+    "MiddlewareManager",
+    "StateMachine",
+    "State",
     "PaginationKeyboard",
     "SimplePagination",
+    
+    # Infrastructure
     "RateLimiter",
     "TelegramRateLimiter",
     "get_user_info",
     "get_chat_info",
     "format_text",
+    "parse_command",
+    "escape_html",
+    "escape_markdown",
+    
+    # Features
+    "Quiz",
+    "QuizQuestion",
+    "FSMState",
+    "StatesGroup",
+    "FSMContext",
+    "state",
+    
+    # Bot
+    "TelegramBot",
+    "Bot",
     
     # Web
     "WebServer",
     "AdminPanel",
     "TelegramAuth",
+    "Router",
+    "Controller",
     
     # Mini Apps
     "MiniAppValidator",

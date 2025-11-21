@@ -702,15 +702,175 @@ Thumbs.db
 
 
 def init_database():
-    """Инициализировать базу данных"""
+    """Инициализировать базу данных и создать дефолтные миграции"""
     print("Инициализация базы данных...")
-    # TODO: реализовать
+    
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    from .migration_templates import create_default_migrations
+    from pathlib import Path
+    
+    try:
+        # Загрузка конфигурации
+        config = load_config()
+        
+        # Создание движка
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        # Создание дефолтных миграций
+        migrations_path = Path("migrations")
+        create_default_migrations(migrations_path)
+        print(f"[SUCCESS] Дефолтные миграции созданы в {migrations_path}/")
+        
+        # Применение миграций
+        migration_manager = MigrationManager(engine, str(migrations_path))
+        migration_manager.migrate()
+        
+        print("[SUCCESS] База данных инициализирована")
+    except Exception as e:
+        print(f"[ERROR] Ошибка инициализации: {e}")
 
 
 def run_migrations():
-    """Запустить миграции"""
+    """Запустить миграции (php artisan migrate)"""
     print("Запуск миграций...")
-    # TODO: реализовать
+    
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    from pathlib import Path
+    
+    try:
+        config = load_config()
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        migrations_path = Path("migrations")
+        if not migrations_path.exists():
+            print("[ERROR] Директория migrations не найдена. Запустите: tgframework init-db")
+            return
+        
+        migration_manager = MigrationManager(engine, str(migrations_path))
+        migration_manager.migrate()
+        
+        print("[SUCCESS] Миграции применены")
+    except Exception as e:
+        print(f"[ERROR] Ошибка миграции: {e}")
+
+
+def rollback_migrations(steps: int = 1):
+    """Откатить миграции (php artisan migrate:rollback)"""
+    print(f"Откат последних {steps} батчей миграций...")
+    
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    from pathlib import Path
+    
+    try:
+        config = load_config()
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        migration_manager = MigrationManager(engine, "migrations")
+        migration_manager.rollback(steps)
+        
+        print("[SUCCESS] Миграции откачены")
+    except Exception as e:
+        print(f"[ERROR] Ошибка отката: {e}")
+
+
+def reset_migrations():
+    """Откатить все миграции (php artisan migrate:reset)"""
+    print("Откат всех миграций...")
+    
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    
+    try:
+        config = load_config()
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        migration_manager = MigrationManager(engine, "migrations")
+        migration_manager.reset()
+        
+        print("[SUCCESS] Все миграции откачены")
+    except Exception as e:
+        print(f"[ERROR] Ошибка сброса: {e}")
+
+
+def refresh_migrations():
+    """Откатить и применить заново (php artisan migrate:refresh)"""
+    print("Обновление миграций...")
+    
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    
+    try:
+        config = load_config()
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        migration_manager = MigrationManager(engine, "migrations")
+        migration_manager.refresh()
+        
+        print("[SUCCESS] База данных обновлена")
+    except Exception as e:
+        print(f"[ERROR] Ошибка обновления: {e}")
+
+
+def fresh_migrations():
+    """Удалить все таблицы и применить миграции (php artisan migrate:fresh)"""
+    print("Пересоздание базы данных...")
+    
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    
+    try:
+        config = load_config()
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        migration_manager = MigrationManager(engine, "migrations")
+        migration_manager.fresh()
+        
+        print("[SUCCESS] База данных пересоздана")
+    except Exception as e:
+        print(f"[ERROR] Ошибка пересоздания: {e}")
+
+
+def migration_status():
+    """Показать статус миграций (php artisan migrate:status)"""
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    
+    try:
+        config = load_config()
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        migration_manager = MigrationManager(engine, "migrations")
+        migration_manager.status()
+    except Exception as e:
+        print(f"[ERROR] Ошибка: {e}")
+
+
+def make_migration(name: str):
+    """Создать новую миграцию (php artisan make:migration)"""
+    from tgframework.core import load_config
+    from tgframework.orm import create_engine, MigrationManager
+    
+    try:
+        config = load_config()
+        engine = create_engine(config.database.connection_string)
+        engine.connect()
+        
+        migration_manager = MigrationManager(engine, "migrations")
+        file_path = migration_manager.create_migration(name)
+        
+        print(f"[SUCCESS] Миграция создана: {file_path}")
+    except Exception as e:
+        print(f"[ERROR] Ошибка создания миграции: {e}")
 
 
 def main():
@@ -724,10 +884,30 @@ def main():
     create_parser.add_argument("--output", "-o", help="Директория для создания проекта")
     
     # init-db
-    subparsers.add_parser("init-db", help="Инициализировать базу данных")
+    subparsers.add_parser("init-db", help="Инициализировать базу данных и создать дефолтные миграции")
     
     # migrate
     subparsers.add_parser("migrate", help="Запустить миграции")
+    
+    # migrate:rollback
+    rollback_parser = subparsers.add_parser("migrate:rollback", help="Откатить последний батч миграций")
+    rollback_parser.add_argument("--steps", type=int, default=1, help="Количество батчей для отката")
+    
+    # migrate:reset
+    subparsers.add_parser("migrate:reset", help="Откатить все миграции")
+    
+    # migrate:refresh
+    subparsers.add_parser("migrate:refresh", help="Откатить и применить заново все миграции")
+    
+    # migrate:fresh
+    subparsers.add_parser("migrate:fresh", help="Удалить все таблицы и применить миграции")
+    
+    # migrate:status
+    subparsers.add_parser("migrate:status", help="Показать статус миграций")
+    
+    # make:migration
+    make_migration_parser = subparsers.add_parser("make:migration", help="Создать новую миграцию")
+    make_migration_parser.add_argument("name", help="Название миграции (например: create_products_table)")
     
     args = parser.parse_args()
     
@@ -737,6 +917,18 @@ def main():
         init_database()
     elif args.command == "migrate":
         run_migrations()
+    elif args.command == "migrate:rollback":
+        rollback_migrations(args.steps)
+    elif args.command == "migrate:reset":
+        reset_migrations()
+    elif args.command == "migrate:refresh":
+        refresh_migrations()
+    elif args.command == "migrate:fresh":
+        fresh_migrations()
+    elif args.command == "migrate:status":
+        migration_status()
+    elif args.command == "make:migration":
+        make_migration(args.name)
     else:
         parser.print_help()
 

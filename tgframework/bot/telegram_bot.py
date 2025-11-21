@@ -9,11 +9,8 @@ from typing import Any, Callable, Dict, List, Optional
 import aiohttp
 from aiohttp import web
 
-from ..handlers import CommandHandler, CallbackHandler, MessageHandler
-from ..state import StateMachine
-from ..middleware import MiddlewareManager
-from ..rate_limiter import TelegramRateLimiter
-from ..utils import parse_command
+from ..application import CommandHandler, CallbackHandler, MessageHandler, StateMachine, MiddlewareManager
+from ..infrastructure import TelegramRateLimiter, parse_command
 
 # Настройка логирования
 logging.basicConfig(
