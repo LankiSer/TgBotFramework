@@ -98,15 +98,15 @@ from .bot import TelegramBot
 from .bot import TelegramBot as Bot  # Alias
 
 # Web
-from .web import WebServer, AdminPanel, TelegramAuth, Router, Controller
+from .web import WebServer, TelegramAuth, Router, Controller
 
 # Mini Apps
-from .miniapp import MiniAppValidator, ReactRenderer, NextJSRenderer
+from .miniapp import MiniAppValidator, ReactRenderer, NextJSRenderer, get_telegram_user_photo_url
 
 # Backward compatibility - Database (deprecated, use ORM)
 from .orm import Session as Database  # Temporary alias
 
-__version__ = "3.0.0"
+__version__ = "3.1.2"
 
 __all__ = [
     # Core
@@ -186,7 +186,6 @@ __all__ = [
     
     # Web
     "WebServer",
-    "AdminPanel",
     "TelegramAuth",
     "Router",
     "Controller",
@@ -195,4 +194,5 @@ __all__ = [
     "MiniAppValidator",
     "ReactRenderer",
     "NextJSRenderer",
+    "get_telegram_user_photo_url",
 ]

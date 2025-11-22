@@ -1,12 +1,25 @@
+# -*- coding: utf-8 -*-
 """
-CLI команды
+CLI команды для TgFramework
 """
 
 import os
 import sys
+import io
 from pathlib import Path
 from typing import Optional
 import argparse
+
+# Установка кодировки UTF-8 для Windows консоли
+if sys.platform == 'win32':
+    try:
+        # Пытаемся установить UTF-8 для stdout
+        if sys.stdout.encoding != 'utf-8':
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        if sys.stderr.encoding != 'utf-8':
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    except:
+        pass
 
 
 def create_project(project_name: str, output_dir: Optional[str] = None):
@@ -23,10 +36,10 @@ def create_project(project_name: str, output_dir: Optional[str] = None):
     project_path = Path(output_dir) / project_name
     
     if project_path.exists():
-        print(f"[ERROR] Проект {project_name} уже существует в {output_dir}")
+        print(f"[ERROR] Project '{project_name}' already exists in {output_dir}")
         return
     
-    print(f"Создание проекта {project_name}...")
+    print(f"Creating project {project_name}...")
     
     # Создаем структуру проекта
     directories = [
@@ -79,21 +92,21 @@ def create_project(project_name: str, output_dir: Optional[str] = None):
     create_readme_file(project_path, project_name)
     create_gitignore_file(project_path)
     
-    print(f"[SUCCESS] Проект {project_name} создан успешно!")
-    print(f"\nСтруктура проекта:")
+    print(f"[OK] Project '{project_name}' created successfully!")
+    print(f"\nProject structure:")
     print(f"   {project_path}/")
-    print(f"   ├── app/                    # Handlers, keyboards, middlewares")
-    print(f"   ├── domain/                 # Domain models, DTOs, services")
-    print(f"   ├── infrastructure/         # Database, external services")
-    print(f"   ├── web/                    # Web server, admin panel")
-    print(f"   ├── config/")
-    print(f"   ├── .env                    # Configuration")
-    print(f"   ├── main.py                 # Entry point")
-    print(f"   └── requirements.txt")
-    print(f"\nСледующие шаги:")
+    print(f"   +-- app/                    # Handlers, keyboards, middlewares")
+    print(f"   +-- domain/                 # Domain models, DTOs, services")
+    print(f"   +-- infrastructure/         # Database, external services")
+    print(f"   +-- web/                    # Web server, admin panel")
+    print(f"   +-- config/")
+    print(f"   +-- .env                    # Configuration")
+    print(f"   +-- main.py                 # Entry point")
+    print(f"   +-- requirements.txt")
+    print(f"\nNext steps:")
     print(f"   1. cd {project_name}")
     print(f"   2. pip install -r requirements.txt")
-    print(f"   3. Отредактируйте .env файл (добавьте BOT_TOKEN)")
+    print(f"   3. Edit .env file (add BOT_TOKEN)")
     print(f"   4. python main.py")
 
 
@@ -721,20 +734,20 @@ def init_database():
         # Создание дефолтных миграций
         migrations_path = Path("migrations")
         create_default_migrations(migrations_path)
-        print(f"[SUCCESS] Дефолтные миграции созданы в {migrations_path}/")
+        print(f"[OK] Default migrations created in {migrations_path}/")
         
         # Применение миграций
         migration_manager = MigrationManager(engine, str(migrations_path))
         migration_manager.migrate()
         
-        print("[SUCCESS] База данных инициализирована")
+        print("[OK] Database initialized")
     except Exception as e:
-        print(f"[ERROR] Ошибка инициализации: {e}")
+        print(f"[ERROR] Initialization failed: {e}")
 
 
 def run_migrations():
     """Запустить миграции (php artisan migrate)"""
-    print("Запуск миграций...")
+    print("Running migrations...")
     
     from tgframework.core import load_config
     from tgframework.orm import create_engine, MigrationManager
@@ -747,20 +760,20 @@ def run_migrations():
         
         migrations_path = Path("migrations")
         if not migrations_path.exists():
-            print("[ERROR] Директория migrations не найдена. Запустите: tgframework init-db")
+            print("[ERROR] Migrations directory not found. Run: tgframework init-db")
             return
         
         migration_manager = MigrationManager(engine, str(migrations_path))
         migration_manager.migrate()
         
-        print("[SUCCESS] Миграции применены")
+        print("[OK] Migrations applied")
     except Exception as e:
-        print(f"[ERROR] Ошибка миграции: {e}")
+        print(f"[ERROR] Migration failed: {e}")
 
 
 def rollback_migrations(steps: int = 1):
     """Откатить миграции (php artisan migrate:rollback)"""
-    print(f"Откат последних {steps} батчей миграций...")
+    print(f"Rolling back last {steps} migration batch(es)...")
     
     from tgframework.core import load_config
     from tgframework.orm import create_engine, MigrationManager
@@ -774,14 +787,14 @@ def rollback_migrations(steps: int = 1):
         migration_manager = MigrationManager(engine, "migrations")
         migration_manager.rollback(steps)
         
-        print("[SUCCESS] Миграции откачены")
+        print("[OK] Migrations rolled back")
     except Exception as e:
-        print(f"[ERROR] Ошибка отката: {e}")
+        print(f"[ERROR] Rollback failed: {e}")
 
 
 def reset_migrations():
     """Откатить все миграции (php artisan migrate:reset)"""
-    print("Откат всех миграций...")
+    print("Resetting all migrations...")
     
     from tgframework.core import load_config
     from tgframework.orm import create_engine, MigrationManager
@@ -794,14 +807,14 @@ def reset_migrations():
         migration_manager = MigrationManager(engine, "migrations")
         migration_manager.reset()
         
-        print("[SUCCESS] Все миграции откачены")
+        print("[OK] All migrations reset")
     except Exception as e:
-        print(f"[ERROR] Ошибка сброса: {e}")
+        print(f"[ERROR] Reset failed: {e}")
 
 
 def refresh_migrations():
-    """Откатить и применить заново (php artisan migrate:refresh)"""
-    print("Обновление миграций...")
+    """Refresh migrations (php artisan migrate:refresh)"""
+    print("Refreshing migrations...")
     
     from tgframework.core import load_config
     from tgframework.orm import create_engine, MigrationManager
@@ -814,14 +827,14 @@ def refresh_migrations():
         migration_manager = MigrationManager(engine, "migrations")
         migration_manager.refresh()
         
-        print("[SUCCESS] База данных обновлена")
+        print("[OK] Database refreshed")
     except Exception as e:
-        print(f"[ERROR] Ошибка обновления: {e}")
+        print(f"[ERROR] Refresh failed: {e}")
 
 
 def fresh_migrations():
-    """Удалить все таблицы и применить миграции (php artisan migrate:fresh)"""
-    print("Пересоздание базы данных...")
+    """Fresh migrations (php artisan migrate:fresh)"""
+    print("Fresh migrating database...")
     
     from tgframework.core import load_config
     from tgframework.orm import create_engine, MigrationManager
@@ -834,9 +847,9 @@ def fresh_migrations():
         migration_manager = MigrationManager(engine, "migrations")
         migration_manager.fresh()
         
-        print("[SUCCESS] База данных пересоздана")
+        print("[OK] Database fresh migrated")
     except Exception as e:
-        print(f"[ERROR] Ошибка пересоздания: {e}")
+        print(f"[ERROR] Fresh migration failed: {e}")
 
 
 def migration_status():
@@ -852,11 +865,11 @@ def migration_status():
         migration_manager = MigrationManager(engine, "migrations")
         migration_manager.status()
     except Exception as e:
-        print(f"[ERROR] Ошибка: {e}")
+        print(f"[ERROR] Failed: {e}")
 
 
 def make_migration(name: str):
-    """Создать новую миграцию (php artisan make:migration)"""
+    """Create new migration (php artisan make:migration)"""
     from tgframework.core import load_config
     from tgframework.orm import create_engine, MigrationManager
     
@@ -868,9 +881,9 @@ def make_migration(name: str):
         migration_manager = MigrationManager(engine, "migrations")
         file_path = migration_manager.create_migration(name)
         
-        print(f"[SUCCESS] Миграция создана: {file_path}")
+        print(f"[OK] Migration created: {file_path}")
     except Exception as e:
-        print(f"[ERROR] Ошибка создания миграции: {e}")
+        print(f"[ERROR] Migration creation failed: {e}")
 
 
 def main():

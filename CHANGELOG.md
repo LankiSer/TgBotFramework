@@ -1,5 +1,55 @@
 # Changelog
 
+## [3.1.2] - 2025-11-22
+
+### Новое
+
+**React + TypeScript интеграция:**
+- ✅ `ReactRenderer` для Server-Side Rendering с props
+- ✅ `get_telegram_user_photo_url()` - автоматическое получение аватарок
+- ✅ CLI генерирует React проект с `--no-react` флагом
+- ✅ Полная TypeScript типизация
+- ✅ Vite для сборки с Hot Module Replacement
+- ✅ Telegram Web App SDK интеграция
+- ✅ Готовые компоненты (Header, Profile, Stats, ActionGrid)
+
+**Шаблоны React:**
+- `package.json`, `tsconfig.json`, `vite.config.ts`
+- `App.tsx`, `main.tsx` с server props
+- `useTelegramWebApp` hook
+- Компоненты с аватарками пользователей
+- Responsive CSS стили
+
+**Документация:**
+- `REACT_GUIDE.md` - полное руководство по React
+- Примеры контроллеров с ReactRenderer
+- API интеграция Python ↔ React
+
+### Улучшения
+
+- Исправлена кодировка UTF-8 во всех рендерерах
+- Оптимизирована загрузка аватарок из Telegram
+- Добавлена поддержка JSON response с UTF-8
+- Улучшена обработка ошибок в `get_telegram_user_photo_url`
+
+## [3.0.2] - 2025-11-21
+
+### Исправления
+
+- Исправлен импорт AdminPanel в web/__init__.py
+- Удалены все ссылки на несуществующий модуль admin.py
+- Обновлена документация
+
+## [3.0.1] - 2025-11-21
+
+### Изменения
+
+- Полная реорганизация структуры по DDD/DTO принципам
+- Все файлы разделены по слоям: core, orm, domain, application, infrastructure, features
+- Удалены старые файлы из корня (`bot.py`, `database.py`)
+- Удалены лишние MD файлы
+- Обновлена документация (ARCHITECTURE.md, DDD_EXAMPLES.md, QUICK_START.md)
+
 ## [3.0.0] - 2025-11-21
 
 ### Полное переписывание фреймворка

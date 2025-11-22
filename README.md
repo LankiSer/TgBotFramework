@@ -1,6 +1,6 @@
-# TgFramework 3.0
+# TgFramework 3.1.2
 
-Мощный фреймворк для разработки Telegram ботов с DDD архитектурой, собственной ORM, веб-сервером и поддержкой Mini Apps.
+Мощный фреймворк для разработки Telegram ботов с DDD архитектурой, собственной ORM, веб-сервером, React + TypeScript и поддержкой Mini Apps.
 
 ## Установка
 
@@ -14,18 +14,24 @@ pip install psycopg2-binary
 ## Быстрый старт
 
 ```bash
-# 1. Создать проект
+# 1. Создать проект с React (по умолчанию)
 tgframework create-project my_bot
+
+# Или без React
+tgframework create-project my_bot --no-react
 
 # 2. Перейти в проект
 cd my_bot
 
 # 3. Настроить .env (добавить BOT_TOKEN)
 
-# 4. Инициализировать БД
+# 4. Установить и собрать frontend (если с React)
+cd frontend && npm install && npm run build && cd ..
+
+# 5. Инициализировать БД
 tgframework init-db
 
-# 5. Запустить
+# 6. Запустить
 python main.py
 ```
 
@@ -217,22 +223,50 @@ async def main():
 asyncio.run(main())
 ```
 
+## React + TypeScript (Новое в 3.1.2!)
+
+```python
+from tgframework.miniapp import ReactRenderer, get_telegram_user_photo_url
+
+# Инициализация
+renderer = ReactRenderer('/path/to/build')
+
+# Server-Side Props для React
+props = {
+    'user': {
+        'user_id': 123,
+        'first_name': 'John',
+        'photo_url': get_telegram_user_photo_url(bot_token, 123)
+    },
+    'page': 'home'
+}
+
+# Рендеринг React приложения
+return renderer.render(props)
+```
+
+**Frontend (React + TypeScript):**
+```tsx
+// Получаем server props
+const serverProps = (window as any).__SERVER_PROPS__ || {};
+
+// Отображаем аватарку
+{user.photo_url ? (
+  <img src={user.photo_url} alt={user.first_name} />
+) : (
+  <div className="avatar-placeholder">{user.first_name[0]}</div>
+)}
+```
+
+**Полная документация:** [REACT_GUIDE.md](REACT_GUIDE.md)
+
 ## Mini Apps
 
 ```python
-from tgframework.miniapp import MiniAppValidator, ReactRenderer
+from tgframework.miniapp import MiniAppValidator
 
 validator = MiniAppValidator(bot_token)
-renderer = ReactRenderer()
-
-# Валидация
 validated = validator.validate_init_data(init_data)
-
-# Рендеринг с серверными переменными
-html = renderer.render("app.html", context={
-    "user": user_data,
-    "api_url": "https://api.example.com"
-})
 ```
 
 ## CLI Команды
@@ -278,6 +312,24 @@ MINIAPP_ENABLED=false
 MINIAPP_URL=
 ```
 
+## Новое в 3.1.2
+
+### React + TypeScript интеграция
+
+- **ReactRenderer** - Server-Side Rendering с props
+- **get_telegram_user_photo_url()** - автоматическая загрузка аватарок
+- **TypeScript** компоненты с типизацией
+- **Vite** сборка с Hot Module Replacement
+- **Telegram Web App SDK** - полная интеграция
+- **Готовые компоненты** - Header, Profile, Stats, ActionGrid
+
+```bash
+# Создать проект с React
+tgframework create-project my_bot
+cd my_bot/frontend
+npm install && npm run build
+```
+
 ## Возможности
 
 ### Core
@@ -319,9 +371,11 @@ MINIAPP_URL=
 - CORS support
 
 ### Mini Apps
-- Валидация данных
-- React/Next.js рендеринг
-- Server-side props
+- **React + TypeScript** - современный frontend
+- **Server-Side Props** - передача данных из Python
+- **Telegram аватарки** - автоматическое получение
+- Валидация initData
+- Telegram Web App SDK
 
 ## Документация
 
