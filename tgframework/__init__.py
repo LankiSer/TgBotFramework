@@ -106,7 +106,7 @@ from .miniapp import MiniAppValidator, ReactRenderer, NextJSRenderer, get_telegr
 # Backward compatibility - Database (deprecated, use ORM)
 from .orm import Session as Database  # Temporary alias
 
-__version__ = "3.1.2"
+__version__ = "3.1.3"
 
 __all__ = [
     # Core

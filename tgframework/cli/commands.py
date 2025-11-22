@@ -77,7 +77,7 @@ def create_project(project_name: str, output_dir: Optional[str] = None):
         # Создаем __init__.py
         if directory and not directory.startswith("web/static") and not directory.startswith("web/templates") and not directory == "config" and not directory == "migrations":
             init_file = dir_path / "__init__.py"
-            init_file.write_text('"""\n' + f'{directory.replace("/", ".")} module\n' + '"""\n')
+            init_file.write_text('"""\n' + f'{directory.replace("/", ".")} module\n' + '"""\n', encoding='utf-8')
     
     # Создаем файлы конфигурации
     create_env_file(project_path)
@@ -143,7 +143,7 @@ MINIAPP_SHORT_NAME=
 DEBUG=false
 LOG_LEVEL=INFO
 """
-    (project_path / ".env").write_text(env_content)
+    (project_path / ".env").write_text(env_content, encoding='utf-8')
 
 
 def create_env_example(project_path: Path):
@@ -179,7 +179,7 @@ MINIAPP_SHORT_NAME=
 DEBUG=false
 LOG_LEVEL=INFO
 """
-    (project_path / ".env.example").write_text(env_example)
+    (project_path / ".env.example").write_text(env_example, encoding='utf-8')
 
 
 def create_main_file(project_path: Path, project_name: str):
@@ -256,7 +256,7 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 '''
-    (project_path / "main.py").write_text(main_content)
+    (project_path / "main.py").write_text(main_content, encoding='utf-8')
 
 
 def create_bot_file(project_path: Path):
@@ -318,7 +318,7 @@ def create_bot(config: Config, session: Session) -> Bot:
     
     return bot
 '''
-    (project_path / "app" / "bot.py").write_text(bot_content)
+    (project_path / "app" / "bot.py").write_text(bot_content, encoding='utf-8')
 
 
 def create_handlers_files(project_path: Path):
@@ -353,7 +353,7 @@ async def handle(update, context):
     
     await bot.send_message(chat_id, text)
 '''
-    (project_path / "app" / "handlers" / "commands" / "start.py").write_text(start_content)
+    (project_path / "app" / "handlers" / "commands" / "start.py").write_text(start_content, encoding='utf-8')
     
     # commands/help.py
     help_content = '''"""
@@ -373,7 +373,7 @@ async def handle(update, context):
     
     await bot.send_message(chat_id, text, parse_mode="Markdown")
 '''
-    (project_path / "app" / "handlers" / "commands" / "help.py").write_text(help_content)
+    (project_path / "app" / "handlers" / "commands" / "help.py").write_text(help_content, encoding='utf-8')
     
     # commands/admin.py
     admin_content = '''"""
@@ -407,7 +407,7 @@ async def handle(update, context):
     
     await bot.send_message(chat_id, text, parse_mode="Markdown", reply_markup=keyboard.build())
 '''
-    (project_path / "app" / "handlers" / "commands" / "admin.py").write_text(admin_content)
+    (project_path / "app" / "handlers" / "commands" / "admin.py").write_text(admin_content, encoding='utf-8')
     
     # callbacks/button_handler.py
     callback_content = '''"""
@@ -422,7 +422,7 @@ async def handle(update, context):
     
     await bot.answer_callback_query(callback_query["id"], text="Кнопка нажата!")
 '''
-    (project_path / "app" / "handlers" / "callbacks" / "button_handler.py").write_text(callback_content)
+    (project_path / "app" / "handlers" / "callbacks" / "button_handler.py").write_text(callback_content, encoding='utf-8')
     
     # messages/echo.py
     echo_content = '''"""
@@ -438,7 +438,7 @@ async def handle(update, context):
     if text:
         await bot.send_message(chat_id, f"Вы написали: {text}")
 '''
-    (project_path / "app" / "handlers" / "messages" / "echo.py").write_text(echo_content)
+    (project_path / "app" / "handlers" / "messages" / "echo.py").write_text(echo_content, encoding='utf-8')
 
 
 def create_domain_files(project_path: Path):
@@ -471,7 +471,7 @@ def setup_database(engine: DatabaseEngine):
     migration_manager.create_table_from_model(Message)
     migration_manager.create_table_from_model(UserState)
 '''
-    (project_path / "infrastructure" / "database" / "setup.py").write_text(db_setup)
+    (project_path / "infrastructure" / "database" / "setup.py").write_text(db_setup, encoding='utf-8')
 
 
 def create_web_files(project_path: Path):
@@ -508,7 +508,7 @@ def register_routes(router: Router, session, bot):
     router.get("/", web_controller.index, name="home")
     router.get("/about", web_controller.about, name="about")
 '''
-    (project_path / "web" / "routes.py").write_text(routes_content)
+    (project_path / "web" / "routes.py").write_text(routes_content, encoding='utf-8')
     
     # web/controllers/api_controller.py
     api_controller_content = '''"""
@@ -576,8 +576,8 @@ class ApiController(Controller):
 '''
     controllers_dir = project_path / "web" / "controllers"
     controllers_dir.mkdir(exist_ok=True)
-    (controllers_dir / "__init__.py").write_text('"""\nWeb controllers\n"""\n')
-    (controllers_dir / "api_controller.py").write_text(api_controller_content)
+    (controllers_dir / "__init__.py").write_text('"""\nWeb controllers\n"""\n', encoding='utf-8')
+    (controllers_dir / "api_controller.py").write_text(api_controller_content, encoding='utf-8')
     
     # web/controllers/web_controller.py
     web_controller_content = '''"""
@@ -625,7 +625,7 @@ class WebController(Controller):
             "description": "Created with TgFramework 3.0"
         })
 '''
-    (controllers_dir / "web_controller.py").write_text(web_controller_content)
+    (controllers_dir / "web_controller.py").write_text(web_controller_content, encoding='utf-8')
 
 
 def create_requirements_file(project_path: Path):
@@ -635,7 +635,7 @@ python-dotenv>=1.0.0
 aiohttp>=3.9.0
 psycopg2-binary>=2.9.0  # Если используете PostgreSQL
 """
-    (project_path / "requirements.txt").write_text(requirements)
+    (project_path / "requirements.txt").write_text(requirements, encoding='utf-8')
 
 
 def create_readme_file(project_path: Path, project_name: str):
@@ -674,7 +674,7 @@ python main.py
 
 Полная документация доступна на [GitHub](https://github.com/LankiSer/TgBotFramework)
 """
-    (project_path / "README.md").write_text(readme)
+    (project_path / "README.md").write_text(readme, encoding='utf-8')
 
 
 def create_gitignore_file(project_path: Path):
@@ -711,7 +711,7 @@ ENV/
 .DS_Store
 Thumbs.db
 """
-    (project_path / ".gitignore").write_text(gitignore)
+    (project_path / ".gitignore").write_text(gitignore, encoding='utf-8')
 
 
 def init_database():
